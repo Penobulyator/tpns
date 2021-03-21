@@ -5,27 +5,34 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def rename_params(params):
+def rename_columns(dataframe):
     print("Renaming parameters:")
     start = ord('A')
-    for i in range(0, len(params)):
+
+    for i, column in enumerate(dataframe.columns):
         new_name = chr(start + i)
         if ord(new_name) >= ord('Z'):
             new_name = 'A' + chr(start + i % (ord('Z') - start))
 
-        print('{} -> {}'.format(params[i], new_name))
-        params[i] = new_name
+        print('{} -> {}'.format(column, new_name))
+
+        dataframe = dataframe.rename(columns={column: new_name})
+
+    return dataframe
 
 
-def print_correlations(names, corr):
-    for i in names:
-        for j in names:
+def print_correlations(corr):
+    for i in corr.columns:
+        for j in corr.columns:
             if (i > j) & (corr[i][j] > 0.9):
                 print('corr({}, {}) > 0.9'.format(i, j))
 
 
-def read_csv(csvfile, names, values):
-    data_reader = csv.reader(csvfile, delimiter=';')
+def read_csv(csv_file):
+    # read names and values
+    names = []
+    values = []
+    data_reader = csv.reader(csv_file, delimiter=';')
     for i, row in enumerate(data_reader):
         for j, cell in enumerate(row):
             if i == 0:
@@ -37,33 +44,29 @@ def read_csv(csvfile, names, values):
                 else:
                     values[j].append(np.nan)
 
-
-def main():
-    names = []
-    values = []
-    with open('dataset.csv', newline='') as csvfile:
-        read_csv(csvfile, names, values)
-
-    rename_params(names)
-
-    # build data map
+    # build dataframe
     data = {}
     for i in range(0, len(names)):
         data[names[i]] = values[i]
 
-    df = pd.DataFrame(data)
+    return pd.DataFrame(data)
 
-    # build heat map
-    corr_matrix = df.corr()
-    print_correlations(names, corr_matrix)
 
-    heatmap = sns.heatmap(corr_matrix, linewidths=.5, xticklabels=True, yticklabels=True)
+def main():
+    # read dataframe from file
+    with open('dataset.csv', newline='') as csv_file:
+        dataframe = read_csv(csv_file)
+
+    # build heatmap
+    corr_matrix = rename_columns(dataframe).corr()
+    sns.heatmap(corr_matrix, linewidths=.5, xticklabels=True, yticklabels=True)
 
     # build histograms
-    for name in names:
-        tmp = pd.DataFrame({name: data[name]})
+    for name in dataframe.columns:
+        tmp = pd.DataFrame(dataframe[name])
         tmp.hist()
 
+    # show
     plt.show()
 
 
