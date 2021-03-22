@@ -5,12 +5,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def trim(values):
+    x_25 = np.nanquantile(values, 0.25)
+    x_75 = np.nanquantile(values, 0.75)
+
+    lower_border = x_25 - 1.5 * (x_75 - x_25)
+    higher_border = x_75 + 1.5 * (x_75 - x_25)
+
+    for i in range(0, len(values)):
+        if (values[i] < lower_border) | (values[i] > higher_border):
+            values[i] = np.nan
+
+
 def fill_gaps(values):
-    if values.count(np.nan) / len(values) < 0.3:
+    nan_count = values.count(np.nan)
+    if (nan_count != 0) & (nan_count / len(values) < 0.3):
         avg = np.nanmean(values)
 
         for i in range(0, len(values) - 1):
-            if values[i] == np.nan:
+            if values[i] is np.nan:
                 values[i] = avg
 
 
@@ -43,10 +56,9 @@ def columns_correlate_similarly(col1, col2, corr_matrix):
 
 
 def analyze_correlations(corr_matrix):
-    for i in corr_matrix.columns:
-        for j in corr_matrix.columns:
-            if i >= j:
-                continue
+    columns = list(corr_matrix.index)
+    for i in columns:
+        for j in columns[columns.index(i) + 1: len(columns) - 1]:
 
             corr = corr_matrix[i][j]
             if (corr > 0.9) & columns_correlate_similarly(i, j, corr_matrix):
@@ -70,7 +82,8 @@ def read_csv(csv_file):
                     values[j].append(np.nan)
 
     for arr in values:
-        fill_gaps(arr)
+        #fill_gaps(arr)
+        trim(arr)
 
     # build dataframe
     data = {}
@@ -81,19 +94,21 @@ def read_csv(csv_file):
 
 
 def main():
+
     # read dataframe from file
     with open('dataset.csv', newline='') as csv_file:
         dataframe = read_csv(csv_file)
 
     # build heatmap
-    corr_matrix = rename_columns(dataframe).corr()
-    sns.heatmap(corr_matrix, linewidths=.5, xticklabels=True, yticklabels=True)
+    corr_matrix = dataframe.corr()
     analyze_correlations(corr_matrix)
 
     # build histograms
+    hists = []
+    plt.rc('figure', max_open_warning=0)
     for name in dataframe.columns:
         tmp = pd.DataFrame(dataframe[name])
-        tmp.hist()
+        hists.append(tmp.hist())
 
     # show
     plt.show()
