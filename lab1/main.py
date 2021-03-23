@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
+
 def trim(values):
     x_25 = np.nanquantile(values, 0.25)
     x_75 = np.nanquantile(values, 0.75)
@@ -79,23 +80,77 @@ def read_csv(csv_file):
 def splitter(values, n):
     step = (max(values) - min(values)) / n
     out = []
-    for i in range(n):
+    for i in range(n + 1):
         out.append(values.min() + i * step)
     return out
 
 
-def gain_ratio(dataframe):
-    g_total = list(dataframe['G_total'])
-    kgf = list(dataframe['КГФ'])
-
-    n = 1 + math.log(len(kgf), 2) // 1
-
-    intervals = splitter(kgf, n)
-
-    g_total = dataframe.columns['G_total']
-    kgf_col = dataframe.columns['КГФ']
-
+def split_column(column):
     # TODO
+    pass
+
+
+def get_classes(dataframe, targets, groups_count):
+    targets_groups = []
+    for i in range(len(targets)):
+        target = targets[i]
+        intervals = []
+
+        if groups_count[i] == -1:
+            # divide by unique values
+
+            target_unique_values = np.unique(dataframe[targets][~np.isnan(dataframe[targets])])
+            for value in target_unique_values:
+                if value is np.nan:
+                    intervals.append(np.nan)
+                else:
+                    intervals.append([value, value])
+        else:
+            # divide by intervals
+            borders = splitter(dataframe[target], groups_count[i])
+            for j in range(len(borders) - 1):
+                intervals.append([borders[j], borders[j + 1]])
+
+        targets_groups.append(intervals)
+
+    classes = []
+
+    for i in range(len(targets_groups[0])):
+        for j in range(len(targets_groups[1])):
+            new_class = {
+                targets[0]: targets_groups[0][i],
+                targets[1]: targets_groups[1][j]
+            }
+            classes.append(new_class)
+
+    return classes
+
+
+def row_belongs_to_class(dataframe, row_index, gain_ratio_class):
+    for target in gain_ratio_class:
+        row_target_value = dataframe[target][row_index]
+        value_range = gain_ratio_class[target]
+
+        if value_range is np.nan:
+            if row_target_value is not np.nan:
+                return False
+        else:
+            if row_target_value is np.nan:
+                return False
+            elif not value_range[0] <= row_target_value <= value_range[1]:
+                return False
+
+    return True
+
+
+def gain_ratio(dataframe):
+    targets = ['КГФ', 'G_total']
+    kgf_groups_count = 1 + int(math.log(len(dataframe['КГФ']), 2))
+    classes = get_classes(dataframe, targets, [kgf_groups_count, -1])
+
+    for column in dataframe.columns:
+        T = split_column(column)
+        # TODO
 
 
 def main():
@@ -103,7 +158,8 @@ def main():
     with open('dataset.csv', newline='') as csv_file:
         dataframe = read_csv(csv_file)
 
-    print(dataframe)
+    # print gain ratios
+    gain_ratio(dataframe)
 
     # build heatmap
     corr_matrix = dataframe.corr()
@@ -117,6 +173,21 @@ def main():
 
     # show
     plt.show()
+
+
+def get_classes_test():
+    dataframe = pd.DataFrame(data={
+        'x': [0, 1, 2, 3, 4, 5, 6],
+        'y': [np.nan, np.nan, -2, -2, -2, -2, -2]
+    })
+
+    test = get_classes(dataframe, ['x', 'y'], [3, -1])
+
+    for i, _class in enumerate(test):
+        print("Class{}".format(i))
+        print("x: {}".format(str(_class['x'])))
+        print("y: {}".format(str(_class['y'])))
+        print("")
 
 
 if __name__ == "__main__":
