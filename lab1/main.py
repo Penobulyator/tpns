@@ -99,7 +99,7 @@ def get_classes(dataframe, targets, groups_count):
         if groups_count[i] == -1:
             # divide by unique values
 
-            target_unique_values = np.unique(dataframe[targets][~np.isnan(dataframe[targets])])
+            target_unique_values = np.unique(dataframe[target][~np.isnan(dataframe[target])])
             for value in target_unique_values:
                 if value is np.nan:
                     intervals.append(np.nan)
@@ -178,7 +178,7 @@ def main():
 def get_classes_test():
     dataframe = pd.DataFrame(data={
         'x': [0, 1, 2, 3, 4, 5, 6],
-        'y': [np.nan, np.nan, -2, -2, -2, -2, -2]
+        'y': [np.nan, np.nan, -1, -1, -2, -2, -2]
     })
 
     test = get_classes(dataframe, ['x', 'y'], [3, -1])
