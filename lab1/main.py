@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-
+import math
 
 def trim(values):
     x_25 = np.nanquantile(values, 0.25)
@@ -27,29 +27,11 @@ def fill_gaps(values):
                 values[i] = avg
 
 
-def rename_columns(dataframe):
-    print("Renaming parameters:")
-    start = ord('A')
-
-    for i, column in enumerate(dataframe.columns):
-        new_name = chr(start + i)
-        if ord(new_name) >= ord('Z'):
-            new_name = 'A' + chr(start + i % (ord('Z') - start))
-
-        print('{} -> {}'.format(column, new_name))
-
-        dataframe = dataframe.rename(columns={column: new_name})
-
-    print("")
-
-    return dataframe
-
-
 def columns_correlate_similarly(col1, col2, corr_matrix):
     for column in corr_matrix:
         c1 = corr_matrix[col1][column]
         c2 = corr_matrix[col2][column]
-        if abs(c1 - c2) > 0.3:
+        if abs(c1 - c2) > 0.2:
             return False
 
     return True
@@ -81,8 +63,9 @@ def read_csv(csv_file):
                 else:
                     values[j].append(np.nan)
 
+    # trim noise
     for arr in values:
-        #fill_gaps(arr)
+        fill_gaps(arr)
         trim(arr)
 
     # build dataframe
@@ -93,22 +76,44 @@ def read_csv(csv_file):
     return pd.DataFrame(data)
 
 
-def main():
+def splitter(values, n):
+    step = (max(values) - min(values)) / n
+    out = []
+    for i in range(n):
+        out.append(values.min() + i * step)
+    return out
 
+
+def gain_ratio(dataframe):
+    g_total = list(dataframe['G_total'])
+    kgf = list(dataframe['КГФ'])
+
+    n = 1 + math.log(len(kgf), 2) // 1
+
+    intervals = splitter(kgf, n)
+
+    g_total = dataframe.columns['G_total']
+    kgf_col = dataframe.columns['КГФ']
+
+    # TODO
+
+
+def main():
     # read dataframe from file
     with open('dataset.csv', newline='') as csv_file:
         dataframe = read_csv(csv_file)
 
+    print(dataframe)
+
     # build heatmap
     corr_matrix = dataframe.corr()
     analyze_correlations(corr_matrix)
+    # sns.heatmap(corr_matrix)
 
     # build histograms
-    hists = []
-    plt.rc('figure', max_open_warning=0)
-    for name in dataframe.columns:
-        tmp = pd.DataFrame(dataframe[name])
-        hists.append(tmp.hist())
+    # plt.rc('figure', max_open_warning=0)
+    # for name in dataframe.columns:
+    #     pd.DataFrame(dataframe[name]).hist()
 
     # show
     plt.show()
