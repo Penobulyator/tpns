@@ -46,7 +46,6 @@ def analyze_correlations(corr_matrix):
     columns = list(corr_matrix.index)
     for i in columns:
         for j in columns[columns.index(i) + 1: len(columns) - 1]:
-
             corr = corr_matrix[i][j]
             if (corr > 0.9) & columns_correlate_similarly(i, j, corr_matrix):
                 print("Drop {} or {}".format(i, j))
@@ -167,6 +166,7 @@ def get_row_classes(dataframe, classes):
                 break
         if not has_class:
             print("Class is unknown for row number " + str(row_number))
+            row_classes.append(0)
 
     return row_classes
 
@@ -178,11 +178,10 @@ def print_gain_ratio(dataframe):
 
     row_classes = get_row_classes(dataframe, classes)
 
-    mic = mutual_info_classif(dataframe[targets].fillna(0), row_classes)
-    mic.index = dataframe[targets].columns
-    mic.sort_values(ascending=False)
+    mic = mutual_info_classif(dataframe.fillna(0), row_classes)
 
-    print(mic)
+    for i, column in enumerate(dataframe.columns):
+        print("{} - {}".format(column, round(mic[i], 2)))
 
     return
 
@@ -221,9 +220,9 @@ def main():
     # sns.heatmap(corr_matrix)
 
     # build histograms
-    # plt.rc('figure', max_open_warning=0)
-    # for name in dataframe.columns:
-    #     pd.DataFrame(dataframe[name]).hist()
+    plt.rc('figure', max_open_warning=0)
+    for name in dataframe.columns:
+        pd.DataFrame(dataframe[name]).hist()
 
     # show
     plt.show()
