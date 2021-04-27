@@ -36,7 +36,7 @@ def columns_correlate_similarly(col1, col2, corr_matrix):
     for column in corr_matrix:
         c1 = corr_matrix[col1][column]
         c2 = corr_matrix[col2][column]
-        if abs(c1 - c2) > 0.2:
+        if abs(c1 - c2) > 0.3:
             return False
 
     return True
@@ -103,36 +103,31 @@ def split_column(column):
     return result
 
 
-def get_classes(dataframe, targets, groups_count):
+def get_classes(dataframe, targets):
     targets_groups = []
     for i in range(len(targets)):
         target = targets[i]
         intervals = []
 
-        if groups_count[i] == -1:
-            # divide by unique values
+        # divide by intervals
+        groups_count = 1 + int(math.log(len(dataframe[target]), 2))
+        borders = splitter(dataframe[target], groups_count)
 
-            target_unique_values = split_column(dataframe[target].tolist()).keys()
-            for value in target_unique_values:
-                if np.isnan(value):
-                    intervals.append(value)
-                else:
-                    intervals.append([value, value])
-        else:
-            # divide by intervals
-            borders = splitter(dataframe[target], groups_count[i])
-            for j in range(len(borders) - 1):
-                intervals.append([borders[j], borders[j + 1]])
+        for j in range(len(borders) - 1):
+            intervals.append([borders[j], borders[j + 1]])
+
+        if np.isnan(dataframe[target]).any():
+            intervals.append(np.nan)
 
         targets_groups.append(intervals)
 
     classes = []
     for elem in itertools.product(targets_groups[0], targets_groups[1]):
-            new_class = {
-                targets[0]: elem[0],
-                targets[1]: elem[1]
-            }
-            classes.append(new_class)
+        new_class = {
+            targets[0]: elem[0],
+            targets[1]: elem[1]
+        }
+        classes.append(new_class)
 
     return classes
 
@@ -158,29 +153,25 @@ def get_row_classes(dataframe, classes):
     row_classes = []
 
     for row_number, index in enumerate(dataframe.index):
-        has_class = False
         for i, _class in enumerate(classes):
             if row_belongs_to_class(dataframe, index, _class):
                 row_classes.append(i)
-                has_class = True
                 break
-        if not has_class:
-            print("Class is unknown for row number " + str(row_number))
-            row_classes.append(0)
 
     return row_classes
 
 
 def print_gain_ratio(dataframe):
     targets = ['КГФ', 'G_total']
-    kgf_groups_count = 1 + int(math.log(len(dataframe['КГФ']), 2))
-    classes = get_classes(dataframe, targets, [kgf_groups_count, -1])
+    classes = get_classes(dataframe, targets)
 
     row_classes = get_row_classes(dataframe, classes)
 
-    mic = mutual_info_classif(dataframe.fillna(0), row_classes)
+    ratio_columns = list(set(dataframe.columns) - set(targets))
 
-    for i, column in enumerate(dataframe.columns):
+    mic = mutual_info_classif(dataframe[ratio_columns].fillna(0), row_classes)
+
+    for i, column in enumerate(ratio_columns):
         print("{} - {}".format(column, round(mic[i], 2)))
 
     return
@@ -192,7 +183,7 @@ def get_classes_test():
         'y': [np.nan, np.nan, -1, -1, -2, -2, -2]
     })
 
-    test = get_classes(dataframe, ['x', 'y'], [3, -1])
+    test = get_classes(dataframe, ['x', 'y'])
 
     for i, _class in enumerate(test):
         print("Class{}".format(i))
